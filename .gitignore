@@ -1,0 +1,19 @@
+# Carpetas de compilación del proyecto
+out-backend/
+out-frontend/
+out-test/
+
+# Base de datos local (historial)
+data/
+
+# Archivos compilados genéricos de Java
+*.class
+*.jar
+
+# Archivos del sistema operativo (Windows/Mac)
+Thumbs.db
+.DS_Store
+
+# Configuraciones de editores de código (opcional)
+.vscode/
+.idea/
