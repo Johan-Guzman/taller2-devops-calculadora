@@ -44,4 +44,17 @@ public final class HistoryRepository {
         }
         return result;
     }
+
+    public synchronized boolean isWritable() {
+        try {
+            Path parent = file.getParent();
+            Path directory = parent == null ? Path.of(".") : parent;
+            Files.createDirectories(directory);
+            Path probe = Files.createTempFile(directory, "health-", ".tmp");
+            Files.deleteIfExists(probe);
+            return true;
+        } catch (IOException exception) {
+            return false;
+        }
+    }
 }

@@ -7,6 +7,10 @@ import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -14,10 +18,12 @@ import java.nio.file.Path;
 public final class FrontendServer {
     private final Path frontendDirectory;
     private final String backendUrl;
+    private final long startedAtNanos;
 
     public FrontendServer(Path frontendDirectory, String backendUrl) {
         this.frontendDirectory = frontendDirectory.toAbsolutePath().normalize();
         this.backendUrl = normalizeBackendUrl(backendUrl);
+        this.startedAtNanos = System.nanoTime();
     }
 
     public static void main(String[] args) throws Exception {
@@ -36,6 +42,7 @@ public final class FrontendServer {
     public HttpServer createServer(int port) throws IOException {
         HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
         server.createContext("/config.js", this::handleConfig);
+        server.createContext("/status", this::handleStatus);
         server.createContext("/", new StaticHandler(frontendDirectory));
         return server;
     }
@@ -48,6 +55,56 @@ public final class FrontendServer {
         String body = "window.APP_CONFIG = Object.freeze({backendUrl:\"" + escapeJavaScript(backendUrl) + "\"});";
         exchange.getResponseHeaders().set("Cache-Control", "no-store");
         send(exchange, 200, body, "application/javascript; charset=utf-8");
+    }
+
+    private void handleStatus(HttpExchange exchange) throws IOException {
+        if (!"GET".equalsIgnoreCase(exchange.getRequestMethod())) {
+            send(exchange, 405, "{\"error\":\"Método no permitido\"}", "application/json; charset=utf-8");
+            return;
+        }
+
+        long uptimeSeconds = (System.nanoTime() - startedAtNanos) / 1_000_000_000L;
+
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(backendUrl + "/health"))
+                    .GET()
+                    .build();
+            HttpResponse<String> response = HttpClient.newHttpClient().send(
+                    request,
+                    HttpResponse.BodyHandlers.ofString()
+            );
+
+            boolean backendUp = response.statusCode() == 200 && response.body().contains("\"status\":\"UP\"");
+            boolean persistenceWritable = response.body().contains("\"persistenceWritable\":true");
+            String status = backendUp && persistenceWritable ? "UP" : "DEGRADED";
+
+            send(
+                    exchange,
+                    200,
+                    "{\"status\":\"" + status + "\",\"uptimeSeconds\":" + uptimeSeconds
+                            + ",\"backendStatus\":\"" + (backendUp ? "UP" : "DEGRADED") + "\""
+                            + ",\"persistenceWritable\":" + persistenceWritable + "}",
+                    "application/json; charset=utf-8"
+            );
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            send(
+                    exchange,
+                    503,
+                    "{\"status\":\"DOWN\",\"uptimeSeconds\":" + uptimeSeconds
+                            + ",\"backendStatus\":\"DOWN\",\"persistenceWritable\":false}",
+                    "application/json; charset=utf-8"
+            );
+        } catch (Exception exception) {
+            send(
+                    exchange,
+                    503,
+                    "{\"status\":\"DOWN\",\"uptimeSeconds\":" + uptimeSeconds
+                            + ",\"backendStatus\":\"DOWN\",\"persistenceWritable\":false}",
+                    "application/json; charset=utf-8"
+            );
+        }
     }
 
     private static String normalizeBackendUrl(String value) {

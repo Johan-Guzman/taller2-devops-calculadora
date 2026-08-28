@@ -27,6 +27,14 @@ public final class AppTest {
         assertEquals("5", service.sum(new BigDecimal("2"), new BigDecimal("3")).toPlainString(), "suma");
         assertEquals("-1", service.subtract(new BigDecimal("2"), new BigDecimal("3")).toPlainString(), "resta");
         assertEquals("6", service.multiply(new BigDecimal("2"), new BigDecimal("3")).toPlainString(), "multiplicación");
+        assertEquals("4", service.divide(new BigDecimal("8"), new BigDecimal("2")).toPlainString(), "división");
+
+        try {
+            service.divide(BigDecimal.ONE, BigDecimal.ZERO);
+            throw new IllegalStateException("La división entre cero debía fallar");
+        } catch (IllegalArgumentException exception) {
+            assertEquals("No se puede dividir entre cero", exception.getMessage(), "mensaje división entre cero");
+        }
     }
 
     private static void testHistoryRepository() throws Exception {
@@ -39,6 +47,7 @@ public final class AppTest {
         assertEquals("5", Integer.toString(last.size()), "cantidad historial");
         assertEquals("{\"id\":7}", last.get(0), "historial más reciente");
         assertEquals("{\"id\":3}", last.get(4), "quinto elemento del historial");
+        assertEquals("true", Boolean.toString(repository.isWritable()), "persistencia escribible");
     }
 
     private static void testSeparatedTopology() throws Exception {
@@ -64,6 +73,9 @@ public final class AppTest {
             if (!frontendResponse.body().contains("Calculadora distribuida")) {
                 throw new IllegalStateException("Falló contenido del Frontend separado");
             }
+            if (!frontendResponse.body().contains("<option value=\"divide\">Dividir</option>")) {
+                throw new IllegalStateException("El Frontend no contiene la operación de división");
+            }
 
             int configScriptIndex = frontendResponse.body().indexOf("<script src=\"/config.js\"></script>");
             int appScriptIndex = frontendResponse.body().indexOf("<script src=\"app.js\"></script>");
@@ -87,14 +99,40 @@ public final class AppTest {
             if (!appJavaScript.contains("${backendUrl}/api/${operation}") || !appJavaScript.contains("${backendUrl}/api/history")) {
                 throw new IllegalStateException("El Frontend no dirige las peticiones REST al Backend configurado");
             }
+            if (!appJavaScript.contains("divide: '/'")) {
+                throw new IllegalStateException("El Frontend no representa la división en el historial");
+            }
 
             assertCorsPreflight(client, backendUrl + "/api/sum");
+            assertCorsPreflight(client, backendUrl + "/api/divide");
             assertHttpResult(client, backendUrl, "/api/sum", "{\"a\":2,\"b\":3}", "\"result\":5");
             assertHttpResult(client, backendUrl, "/api/subtract", "{\"a\":10,\"b\":4}", "\"result\":6");
             assertHttpResult(client, backendUrl, "/api/multiply", "{\"a\":2.5,\"b\":4}", "\"result\":10");
+            assertHttpResult(client, backendUrl, "/api/divide", "{\"a\":8,\"b\":2}", "\"result\":4");
+            assertHttpError(
+                    client,
+                    backendUrl,
+                    "/api/divide",
+                    "{\"a\":1,\"b\":0}",
+                    HttpURLConnection.HTTP_BAD_REQUEST,
+                    "No se puede dividir entre cero"
+            );
             assertHttpResult(client, backendUrl, "/api/sum", "{\"a\":1,\"b\":1}", "\"result\":2");
             assertHttpResult(client, backendUrl, "/api/subtract", "{\"a\":8,\"b\":3}", "\"result\":5");
             assertHttpResult(client, backendUrl, "/api/multiply", "{\"a\":3,\"b\":3}", "\"result\":9");
+
+            HttpResponse<String> healthResponse = get(client, backendUrl + "/health");
+            assertEquals("200", Integer.toString(healthResponse.statusCode()), "status health Backend");
+            assertContains(healthResponse.body(), "\"status\":\"UP\"", "estado health Backend");
+            assertContains(healthResponse.body(), "\"uptimeSeconds\":", "uptime health Backend");
+            assertContains(healthResponse.body(), "\"persistenceWritable\":true", "persistencia health Backend");
+
+            HttpResponse<String> statusResponse = get(client, "http://127.0.0.1:" + frontendPort + "/status");
+            assertEquals("200", Integer.toString(statusResponse.statusCode()), "status endpoint Frontend");
+            assertContains(statusResponse.body(), "\"status\":\"UP\"", "estado Frontend");
+            assertContains(statusResponse.body(), "\"uptimeSeconds\":", "uptime Frontend");
+            assertContains(statusResponse.body(), "\"backendStatus\":\"UP\"", "estado Backend desde Frontend");
+            assertContains(statusResponse.body(), "\"persistenceWritable\":true", "persistencia desde Frontend");
 
             HttpResponse<String> historyResponse = get(client, backendUrl + "/api/history");
             assertEquals("200", Integer.toString(historyResponse.statusCode()), "status historial separado");
@@ -102,12 +140,15 @@ public final class AppTest {
             if (!historyResponse.body().contains("\"result\":9") || historyResponse.body().contains("\"operation\":\"sum\",\"a\":2,\"b\":3,\"result\":5")) {
                 throw new IllegalStateException("Falló el contenido del historial separado");
             }
+            if (!historyResponse.body().contains("\"operation\":\"divide\"")) {
+                throw new IllegalStateException("La división exitosa no quedó registrada en el historial");
+            }
         } finally {
             frontendServer.stop(0);
             backendServer.stop(0);
         }
 
-        assertEquals("6", Integer.toString(Files.readAllLines(historyFile, StandardCharsets.UTF_8).size()), "persistencia de 6 operaciones");
+        assertEquals("7", Integer.toString(Files.readAllLines(historyFile, StandardCharsets.UTF_8).size()), "persistencia de 7 operaciones");
 
         int restartedBackendPort = freePort();
         String restartedBackendUrl = "http://127.0.0.1:" + restartedBackendPort;
@@ -118,6 +159,10 @@ public final class AppTest {
             HttpResponse<String> historyAfterRestart = get(client, restartedBackendUrl + "/api/history");
             assertEquals("200", Integer.toString(historyAfterRestart.statusCode()), "status historial tras reinicio");
             assertEquals("5", Integer.toString(countOccurrences(historyAfterRestart.body(), "\"timestamp\"")), "historial persistente tras reinicio");
+
+            HttpResponse<String> healthAfterRestart = get(client, restartedBackendUrl + "/health");
+            assertEquals("200", Integer.toString(healthAfterRestart.statusCode()), "health tras reinicio");
+            assertContains(healthAfterRestart.body(), "\"persistenceWritable\":true", "persistencia tras reinicio");
         } finally {
             restartedServer.stop(0);
         }
@@ -134,6 +179,17 @@ public final class AppTest {
         if (!response.body().contains(expectedFragment)) {
             throw new IllegalStateException("Falló " + endpoint + ": " + response.body());
         }
+    }
+
+    private static void assertHttpError(HttpClient client, String baseUrl, String endpoint, String json, int expectedStatus, String expectedFragment) throws Exception {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(baseUrl + endpoint))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(json))
+                .build();
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        assertEquals(Integer.toString(expectedStatus), Integer.toString(response.statusCode()), "status error " + endpoint);
+        assertContains(response.body(), expectedFragment, "mensaje error " + endpoint);
     }
 
     private static void assertCorsPreflight(HttpClient client, String url) throws Exception {
@@ -169,6 +225,12 @@ public final class AppTest {
     private static int freePort() throws Exception {
         try (ServerSocket socket = new ServerSocket(0)) {
             return socket.getLocalPort();
+        }
+    }
+
+    private static void assertContains(String value, String fragment, String name) {
+        if (!value.contains(fragment)) {
+            throw new IllegalStateException("Falló " + name + ". No se encontró: " + fragment + " en: " + value);
         }
     }
 

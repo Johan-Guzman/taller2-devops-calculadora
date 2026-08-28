@@ -7,7 +7,8 @@ const backendUrl = (window.APP_CONFIG && window.APP_CONFIG.backendUrl ? window.A
 const labels = {
     sum: '+',
     subtract: '-',
-    multiply: '×'
+    multiply: '×',
+    divide: '/'
 };
 
 form.addEventListener('submit', async event => {

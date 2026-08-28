@@ -21,10 +21,12 @@ public final class CalculatorServer {
 
     private final CalculatorService calculatorService;
     private final HistoryRepository historyRepository;
+    private final long startedAtNanos;
 
     public CalculatorServer(HistoryRepository historyRepository) {
         this.calculatorService = new CalculatorService();
         this.historyRepository = historyRepository;
+        this.startedAtNanos = System.nanoTime();
     }
 
     public static void main(String[] args) throws Exception {
@@ -42,7 +44,9 @@ public final class CalculatorServer {
         server.createContext("/api/sum", exchange -> handleCalculation(exchange, "sum"));
         server.createContext("/api/subtract", exchange -> handleCalculation(exchange, "subtract"));
         server.createContext("/api/multiply", exchange -> handleCalculation(exchange, "multiply"));
+        server.createContext("/api/divide", exchange -> handleCalculation(exchange, "divide"));
         server.createContext("/api/history", this::handleHistory);
+        server.createContext("/health", this::handleHealth);
         return server;
     }
 
@@ -65,6 +69,7 @@ public final class CalculatorServer {
                 case "sum" -> calculatorService.sum(a, b);
                 case "subtract" -> calculatorService.subtract(a, b);
                 case "multiply" -> calculatorService.multiply(a, b);
+                case "divide" -> calculatorService.divide(a, b);
                 default -> throw new IllegalStateException("Operación no soportada");
             };
 
@@ -72,6 +77,9 @@ public final class CalculatorServer {
             historyRepository.append(record);
             sendJson(exchange, 200, record);
         } catch (IllegalArgumentException exception) {
+            if ("divide".equals(operation)) {
+                System.err.println("Error de división: " + exception.getMessage());
+            }
             sendJson(exchange, 400, "{\"error\":\"" + escapeJson(exception.getMessage()) + "\"}");
         } catch (Exception exception) {
             sendJson(exchange, 500, "{\"error\":\"Error interno del servidor\"}");
@@ -95,6 +103,28 @@ public final class CalculatorServer {
         } catch (Exception exception) {
             sendJson(exchange, 500, "{\"error\":\"No fue posible consultar el historial\"}");
         }
+    }
+
+    private void handleHealth(HttpExchange exchange) throws IOException {
+        addCors(exchange.getResponseHeaders());
+        if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) {
+            send(exchange, 204, "", "application/json; charset=utf-8");
+            return;
+        }
+        if (!"GET".equalsIgnoreCase(exchange.getRequestMethod())) {
+            sendJson(exchange, 405, "{\"error\":\"Método no permitido\"}");
+            return;
+        }
+
+        long uptimeSeconds = (System.nanoTime() - startedAtNanos) / 1_000_000_000L;
+        boolean persistenceWritable = historyRepository.isWritable();
+        String status = persistenceWritable ? "UP" : "DEGRADED";
+        sendJson(
+                exchange,
+                200,
+                "{\"status\":\"" + status + "\",\"uptimeSeconds\":" + uptimeSeconds
+                        + ",\"persistenceWritable\":" + persistenceWritable + "}"
+        );
     }
 
     private static BigDecimal extractNumber(String body, Pattern pattern, String field) {
