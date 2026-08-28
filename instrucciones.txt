@@ -1,0 +1,171 @@
+FASE 1 - CALCULADORA DISTRIBUIDA JAVA
+VERSION DE ENTREGA: 1.0.2
+CORRECCION DEL TICKET HU1 DE LA VERSION 1.0.1
+
+OBJETIVO DE ESTA ENTREGA
+La aplicacion se ejecuta con Frontend y Backend separados.
+El Frontend recibe al iniciar la URL real del Backend y realiza las peticiones HTTP/REST directamente contra esa URL.
+La suma, resta, multiplicacion y persistencia de historial se mantienen en el Backend.
+
+CONTENIDO
+- backend/src/main/java/com/fase1/calculadora/CalculatorServer.java
+- backend/src/main/java/com/fase1/calculadora/CalculatorService.java
+- backend/src/main/java/com/fase1/calculadora/HistoryRepository.java
+- backend/src/main/java/com/fase1/calculadora/FrontendServer.java
+- backend/src/test/java/com/fase1/calculadora/AppTest.java
+- frontend/index.html
+- frontend/app.js
+- frontend/styles.css
+- run-backend.bat
+- run-backend.sh
+- run-frontend.bat
+- run-frontend.sh
+- test.bat
+- test.sh
+- requisitos.txt
+- instrucciones.txt
+
+REQUISITOS
+Consultar requisitos.txt.
+
+PREPARACION GENERAL
+1. Descomprimir la entrega conservando toda la estructura de carpetas.
+2. La misma carpeta descomprimida puede copiarse al equipo Backend y al equipo Frontend.
+3. En ambos equipos verificar:
+   java -version
+   javac -version
+4. Ambos comandos deben existir y corresponder a JDK 17 o superior.
+
+PRUEBAS INCLUIDAS POR DEVELOPMENT
+Ejecutar desde la carpeta raiz de la entrega.
+
+Windows:
+   test.bat
+
+Linux/macOS:
+   ./test.sh
+
+Resultado esperado:
+   OK - Todas las pruebas pasaron
+
+La prueba incluida levanta Frontend y Backend en puertos separados, valida el HTML realmente servido por el Frontend, comprueba que index.html cargue /config.js antes de app.js, valida que /config.js contenga la URL del Backend, valida CORS, prueba suma, resta y multiplicacion, comprueba las ultimas 5 operaciones y comprueba persistencia despues de reiniciar el Backend.
+
+DESPLIEGUE EN DOS EQUIPOS
+
+PASO 1 - EQUIPO BACKEND
+1. Abrir una terminal en la carpeta raiz de la entrega.
+2. Elegir el puerto del Backend. Si no existe una restriccion particular, usar 8080.
+3. Iniciar el Backend.
+
+Windows:
+   run-backend.bat 8080
+
+Linux/macOS:
+   ./run-backend.sh 8080
+
+4. El proceso debe indicar:
+   Backend disponible en http://0.0.0.0:8080
+5. No cerrar esa terminal mientras se prueba la aplicacion.
+6. Obtener la direccion IPv4 del equipo Backend que sea alcanzable desde el equipo Frontend.
+
+Windows:
+   ipconfig
+
+Linux:
+   hostname -I
+
+7. Si el firewall del equipo Backend bloquea conexiones entrantes, mantenerlo activo y autorizar unicamente el puerto TCP elegido para el Backend, por ejemplo 8080.
+8. No es necesario exponer ningun otro puerto del Backend para esta aplicacion.
+
+EJEMPLO
+Si la IPv4 del equipo Backend es 192.168.1.10 y el puerto es 8080, la URL que debe usar el Frontend es:
+   http://192.168.1.10:8080
+
+PASO 2 - EQUIPO FRONTEND
+1. Abrir una terminal en la carpeta raiz de la entrega.
+2. Iniciar el Frontend indicando como primer parametro la URL del Backend obtenida en el paso anterior.
+3. Opcionalmente indicar como segundo parametro el puerto local del Frontend. Si se omite se usa 8081.
+
+Windows:
+   run-frontend.bat http://192.168.1.10:8080 8081
+
+Linux/macOS:
+   ./run-frontend.sh http://192.168.1.10:8080 8081
+
+4. Reemplazar 192.168.1.10 por la IPv4 real del equipo Backend.
+5. No usar localhost ni 127.0.0.1 como direccion del Backend cuando Backend y Frontend estan en equipos diferentes.
+6. El proceso debe indicar dos datos similares a:
+   Frontend disponible en http://0.0.0.0:8081
+   Backend configurado: http://192.168.1.10:8080
+7. En el navegador del equipo Frontend abrir:
+   http://localhost:8081
+
+FUNCIONAMIENTO ESPERADO
+HU1 - Servicio de Suma
+1. Ingresar 2 y 3.
+2. Seleccionar Sumar.
+3. Presionar Calcular.
+4. Debe mostrarse Resultado: 5.
+5. La peticion sale del Frontend y llega al endpoint POST /api/sum del equipo Backend.
+
+HU2 - Multi-Operacion
+1. Ingresar 10 y 4.
+2. Seleccionar Restar.
+3. Presionar Calcular.
+4. Debe mostrarse Resultado: 6.
+5. Ingresar 2.5 y 4.
+6. Seleccionar Multiplicar.
+7. Presionar Calcular.
+8. Debe mostrarse Resultado: 10.
+
+HU3 - Historial del Sistema de Registro
+1. Ejecutar al menos 6 calculos exitosos desde el Frontend.
+2. Presionar Actualizar en Ultimas 5 operaciones si se desea forzar una nueva consulta.
+3. Deben mostrarse solamente las 5 operaciones mas recientes.
+4. En el equipo Backend se crea automaticamente:
+   data/history.jsonl
+5. El archivo conserva todas las operaciones exitosas registradas.
+6. Detener y volver a iniciar solamente el Backend.
+7. Volver a consultar el historial desde el Frontend.
+8. Las ultimas 5 operaciones deben continuar disponibles.
+
+ENDPOINTS DEL BACKEND
+POST /api/sum
+POST /api/subtract
+POST /api/multiply
+GET /api/history
+
+Cuerpo JSON para suma, resta o multiplicacion:
+   {"a":2,"b":3}
+
+Ejemplo de respuesta JSON:
+   {"timestamp":"2026-08-10T20:00:00Z","operation":"sum","a":2,"b":3,"result":5}
+
+GET /api/history devuelve como JSON hasta las ultimas 5 operaciones ordenadas desde la mas reciente.
+
+PERSISTENCIA
+Cada calculo exitoso se guarda como una linea JSON en el equipo Backend en:
+   data/history.jsonl
+
+La carpeta data y el archivo history.jsonl se crean automaticamente al registrar el primer calculo.
+No eliminar ese archivo si se desea conservar el historial entre reinicios.
+
+DETENCION
+En la terminal del Frontend presionar Ctrl+C.
+En la terminal del Backend presionar Ctrl+C.
+
+PROBLEMAS BASICOS DE DESPLIEGUE
+- Si java o javac no existen, instalar o configurar un JDK 17 o superior y repetir.
+- Si el Backend no inicia porque el puerto esta ocupado, elegir otro puerto y usar ese mismo puerto dentro de la URL entregada al Frontend.
+- Si el Frontend no inicia porque el puerto local esta ocupado, elegir otro puerto como segundo parametro de run-frontend.
+- Si el Frontend abre pero muestra un error al calcular o consultar historial, verificar que la URL indicada al iniciar el Frontend contenga la IPv4 real del equipo Backend y el puerto correcto.
+- Si Backend y Frontend estan en equipos diferentes, no configurar la URL del Backend con localhost ni 127.0.0.1.
+- Si la IP y el puerto son correctos pero no existe comunicacion entre equipos, verificar conectividad de red y la regla de firewall del puerto concreto del Backend.
+- Si no se puede crear data/history.jsonl, verificar permisos de escritura en la carpeta de la aplicacion del equipo Backend.
+- Ejecutar los scripts desde la carpeta raiz descomprimida para conservar las rutas esperadas.
+
+TRAZABILIDAD
+Version anterior recibida por Operations: 1.0.1
+Version corregida: 1.0.2
+Ticket atendido: HU1 - /config.js existia y contenia la URL correcta del Backend, pero index.html no lo cargaba antes de app.js.
+Correccion aplicada: index.html carga /config.js antes de app.js para que window.APP_CONFIG exista antes de inicializar la aplicacion. La prueba automatizada valida ahora el HTML servido y el orden de carga de ambos scripts.

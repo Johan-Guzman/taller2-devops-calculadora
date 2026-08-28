@@ -1,0 +1,24 @@
+REQUISITOS DE EJECUCION
+VERSION DE ENTREGA: 1.0.2
+
+EQUIPO BACKEND
+1. JDK 17 o superior instalado.
+2. Los comandos java y javac disponibles en PATH.
+3. Un puerto TCP disponible para el Backend. Por defecto se usa 8080.
+4. Permisos de escritura en la carpeta de la aplicacion para crear data/history.jsonl.
+5. Conectividad de red desde el equipo Frontend hacia la IP y el puerto del Backend.
+6. Mantener el firewall activo y autorizar entrada unicamente al puerto TCP concreto usado por el Backend cuando el entorno lo requiera.
+
+EQUIPO FRONTEND
+1. JDK 17 o superior instalado.
+2. Los comandos java y javac disponibles en PATH.
+3. Un navegador web moderno.
+4. Un puerto TCP local disponible para servir el Frontend. Por defecto se usa 8081.
+5. Conectividad de red hacia la IP y el puerto del Backend.
+
+NO SE REQUIERE
+- Maven.
+- Gradle.
+- Node.js.
+- Base de datos externa.
+- Librerias adicionales.

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Calculadora distribuida - Fase 1</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<main class="container">
+    <section class="card">
+        <h1>Calculadora distribuida</h1>
+        <form id="calculator-form">
+            <label for="a">Primer número</label>
+            <input id="a" name="a" type="number" step="any" required>
+
+            <label for="operation">Operación</label>
+            <select id="operation" name="operation">
+                <option value="sum">Sumar</option>
+                <option value="subtract">Restar</option>
+                <option value="multiply">Multiplicar</option>
+            </select>
+
+            <label for="b">Segundo número</label>
+            <input id="b" name="b" type="number" step="any" required>
+
+            <button type="submit">Calcular</button>
+        </form>
+        <div id="result" class="result" aria-live="polite">Resultado: —</div>
+    </section>
+
+    <section class="card">
+        <div class="history-header">
+            <h2>Últimas 5 operaciones</h2>
+            <button id="refresh-history" type="button">Actualizar</button>
+        </div>
+        <ol id="history"></ol>
+    </section>
+</main>
+<script src="/config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
