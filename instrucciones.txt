@@ -54,17 +54,17 @@ DESPLIEGUE EN DOS EQUIPOS
 
 PASO 1 - EQUIPO BACKEND
 1. Abrir una terminal en la carpeta raiz de la entrega.
-2. Elegir el puerto del Backend. Si no existe una restriccion particular, usar 8080.
+2. Elegir el puerto del Backend. Si no existe una restriccion particular, usar 8082.
 3. Iniciar el Backend.
 
 Windows:
-   run-backend.bat 8080
+   run-backend.bat 8082
 
 Linux/macOS:
-   ./run-backend.sh 8080
+   ./run-backend.sh 8082
 
 4. El proceso debe indicar:
-   Backend disponible en http://0.0.0.0:8080
+   Backend disponible en http://0.0.0.0:8082
 5. No cerrar esa terminal mientras se prueba la aplicacion.
 6. Obtener la direccion IPv4 del equipo Backend que sea alcanzable desde el equipo Frontend.
 
@@ -78,8 +78,8 @@ Linux:
 8. No es necesario exponer ningun otro puerto del Backend para esta aplicacion.
 
 EJEMPLO
-Si la IPv4 del equipo Backend es 192.168.1.10 y el puerto es 8080, la URL que debe usar el Frontend es:
-   http://192.168.1.10:8080
+Si la IPv4 del equipo Backend es 192.168.1.10 y el puerto es 8082, la URL que debe usar el Frontend es:
+   http://192.168.1.10:8082
 
 PASO 2 - EQUIPO FRONTEND
 1. Abrir una terminal en la carpeta raiz de la entrega.
@@ -87,10 +87,10 @@ PASO 2 - EQUIPO FRONTEND
 3. Opcionalmente indicar como segundo parametro el puerto local del Frontend. Si se omite se usa 8081.
 
 Windows:
-   run-frontend.bat http://192.168.1.10:8080 8081
+   run-frontend.bat http://192.168.1.10:8082 8081
 
 Linux/macOS:
-   ./run-frontend.sh http://192.168.1.10:8080 8081
+   ./run-frontend.sh http://192.168.1.10:8082 8081
 
 4. Reemplazar 192.168.1.10 por la IPv4 real del equipo Backend.
 5. No usar localhost ni 127.0.0.1 como direccion del Backend cuando Backend y Frontend estan en equipos diferentes.

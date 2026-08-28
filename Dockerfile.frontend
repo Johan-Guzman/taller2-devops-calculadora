@@ -1,0 +1,15 @@
+FROM eclipse-temurin:17-jdk
+
+WORKDIR /app
+
+COPY backend/src/main/java/com/fase1/calculadora/FrontendServer.java /app/src/com/fase1/calculadora/FrontendServer.java
+COPY frontend/ /app/frontend/
+
+RUN mkdir -p /app/out \
+    && javac --add-modules jdk.httpserver \
+    -d /app/out \
+    /app/src/com/fase1/calculadora/FrontendServer.java
+
+EXPOSE 8081
+
+CMD ["java", "--add-modules", "jdk.httpserver", "-cp", "/app/out", "com.fase1.calculadora.FrontendServer", "http://backend:8082", "8081"]

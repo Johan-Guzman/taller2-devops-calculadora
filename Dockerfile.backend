@@ -1,0 +1,18 @@
+FROM eclipse-temurin:17-jdk
+
+WORKDIR /app
+
+COPY backend/src/main/java/com/fase1/calculadora/ /app/src/com/fase1/calculadora/
+
+RUN mkdir -p /app/out \
+    && javac --add-modules jdk.httpserver \
+    -d /app/out \
+    /app/src/com/fase1/calculadora/CalculatorServer.java \
+    /app/src/com/fase1/calculadora/CalculatorService.java \
+    /app/src/com/fase1/calculadora/HistoryRepository.java
+
+RUN mkdir -p /app/data
+
+EXPOSE 8082
+
+CMD ["java", "--add-modules", "jdk.httpserver", "-cp", "/app/out", "com.fase1.calculadora.CalculatorServer", "8082"]

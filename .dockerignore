@@ -1,0 +1,14 @@
+.git
+.github
+.idea
+.vscode
+
+*.iml
+
+target
+node_modules
+
+*.log
+
+out-backend
+out-frontend

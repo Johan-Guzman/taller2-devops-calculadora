@@ -31,18 +31,18 @@ Ejecutar desde la raíz del proyecto:
 La misma carpeta del proyecto se puede usar tanto en el equipo servidor como en el cliente. Debes ejecutar los comandos desde la carpeta raíz.
 
 ### 1. Desplegar el Backend
-Elige un puerto (por defecto `8080`).
+Elige un puerto (en este caso `8082`).
 
-* **Windows:** `run-backend.bat 8080`
-* **Linux/macOS:** `./run-backend.sh 8080`
+* **Windows:** `run-backend.bat 8082`
+* **Linux/macOS:** `./run-backend.sh 8082`
 
 > **Importante:** Obtén la dirección IPv4 del equipo Backend (`ipconfig` en Windows, `hostname -I` en Linux). Asegúrate de que el firewall permita conexiones entrantes en el puerto elegido.
 
 ### 2. Desplegar el Frontend
 Inicia el Frontend pasándole la URL exacta del Backend y el puerto local para el Frontend (por defecto `8081`).
 
-* **Windows:** `run-frontend.bat http://<IP_BACKEND>:8080 8081`
-* **Linux/macOS:** `./run-frontend.sh http://<IP_BACKEND>:8080 8081`
+* **Windows:** `run-frontend.bat http://<IP_BACKEND>:8082 8081`
+* **Linux/macOS:** `./run-frontend.sh http://<IP_BACKEND>:8082 8081`
 
 *Nota: No uses `localhost` ni `127.0.0.1` en la URL del Backend si los servicios están en equipos diferentes.*
 

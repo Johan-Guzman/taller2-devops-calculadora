@@ -30,7 +30,7 @@ public final class CalculatorServer {
     }
 
     public static void main(String[] args) throws Exception {
-        int port = args.length > 0 ? Integer.parseInt(args[0]) : 8080;
+        int port = args.length > 0 ? Integer.parseInt(args[0]) : 8082;
         CalculatorServer application = new CalculatorServer(
                 new HistoryRepository(Path.of("data", "history.jsonl"))
         );

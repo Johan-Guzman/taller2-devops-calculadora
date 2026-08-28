@@ -2,7 +2,7 @@ const form = document.getElementById('calculator-form');
 const result = document.getElementById('result');
 const history = document.getElementById('history');
 const refreshHistory = document.getElementById('refresh-history');
-const backendUrl = (window.APP_CONFIG && window.APP_CONFIG.backendUrl ? window.APP_CONFIG.backendUrl : '').replace(/\/+$/, '');
+const backendUrl = '';
 
 const labels = {
     sum: '+',
@@ -20,7 +20,6 @@ form.addEventListener('submit', async event => {
     result.textContent = 'Procesando...';
 
     try {
-        ensureBackendConfigured();
         const response = await fetch(`${backendUrl}/api/${operation}`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
@@ -42,7 +41,6 @@ refreshHistory.addEventListener('click', loadHistory);
 async function loadHistory() {
     history.innerHTML = '<li>Cargando...</li>';
     try {
-        ensureBackendConfigured();
         const response = await fetch(`${backendUrl}/api/history`);
         const data = await response.json();
         if (!response.ok) {
@@ -60,12 +58,6 @@ async function loadHistory() {
         });
     } catch (error) {
         history.innerHTML = `<li>Error: ${error.message}</li>`;
-    }
-}
-
-function ensureBackendConfigured() {
-    if (!backendUrl) {
-        throw new Error('El Frontend no tiene configurada la URL del Backend');
     }
 }
 

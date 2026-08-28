@@ -28,7 +28,7 @@ public final class FrontendServer {
 
     public static void main(String[] args) throws Exception {
         if (args.length == 0 || args[0].isBlank()) {
-            throw new IllegalArgumentException("Debe indicar la URL del Backend, por ejemplo http://192.168.1.10:8080");
+            throw new IllegalArgumentException("Debe indicar la URL del Backend, por ejemplo http://192.168.1.10:8082");
         }
         String backendUrl = args[0];
         int port = args.length > 1 ? Integer.parseInt(args[1]) : 8081;
@@ -43,6 +43,7 @@ public final class FrontendServer {
         HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
         server.createContext("/config.js", this::handleConfig);
         server.createContext("/status", this::handleStatus);
+        server.createContext("/api", this::handleApiProxy);
         server.createContext("/", new StaticHandler(frontendDirectory));
         return server;
     }
@@ -105,6 +106,76 @@ public final class FrontendServer {
                     "application/json; charset=utf-8"
             );
         }
+    }
+
+    private void handleApiProxy(HttpExchange exchange) throws IOException {
+    try {
+        String targetUrl = backendUrl + exchange.getRequestURI().toString();
+
+        HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+                .uri(URI.create(targetUrl));
+
+        String method = exchange.getRequestMethod();
+
+        if ("POST".equalsIgnoreCase(method)) {
+            byte[] body = exchange.getRequestBody().readAllBytes();
+
+            requestBuilder
+                    .POST(HttpRequest.BodyPublishers.ofByteArray(body))
+                    .header(
+                            "Content-Type",
+                            exchange.getRequestHeaders()
+                                    .getFirst("Content-Type") != null
+                                    ? exchange.getRequestHeaders().getFirst("Content-Type")
+                                    : "application/json"
+                    );
+        } else {
+            requestBuilder.method(
+                    method,
+                    HttpRequest.BodyPublishers.noBody()
+            );
+        }
+
+        HttpResponse<byte[]> response = HttpClient.newHttpClient().send(
+                requestBuilder.build(),
+                HttpResponse.BodyHandlers.ofByteArray()
+        );
+
+        exchange.getResponseHeaders().set(
+                "Content-Type",
+                response.headers()
+                        .firstValue("Content-Type")
+                        .orElse("application/json; charset=utf-8")
+        );
+
+        exchange.sendResponseHeaders(
+                response.statusCode(),
+                response.body().length
+        );
+
+        try (OutputStream output = exchange.getResponseBody()) {
+            output.write(response.body());
+        }
+
+    } catch (InterruptedException exception) {
+        Thread.currentThread().interrupt();
+
+        send(
+                exchange,
+                503,
+                "{\"error\":\"Backend no disponible\"}",
+                "application/json; charset=utf-8"
+        );
+
+    } catch (Exception exception) {
+
+        send(
+                exchange,
+                502,
+                "{\"error\":\"No fue posible comunicarse con el Backend\"}",
+                "application/json; charset=utf-8"
+        );
+      }
     }
 
     private static String normalizeBackendUrl(String value) {
