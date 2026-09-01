@@ -17,4 +17,11 @@ Thumbs.db
 # Configuraciones de editores de código (opcional)
 .vscode/
 .idea/
+.metals/
+
+# Variables de entorno y llaves locales (despliegue SSH)
+.env
+*.pem
+id_rsa*
+id_ed25519*
 

@@ -1,18 +1,38 @@
-name: CD Taller 2
+name: CD Taller 3
+
 on:
+  workflow_run:
+    workflows: ["CI Taller 3"]
+    branches: [main]
+    types: [completed]
   workflow_dispatch:
-    inputs:
-      backend_url:
-        description: URL del Backend que usará el navegador
-        required: true
-        default: http://localhost:8082
+
 permissions:
   contents: read
+
 jobs:
-  deploy:
+  deploy-local:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    # El PC Ops de este equipo corre Windows; ajustar la etiqueta de equipo
+    # (p. ej. "equipo-B") una vez asignada en el salón.
     runs-on:
       - self-hosted
-      - linux
+      - windows
     steps:
       - uses: actions/checkout@v4
-      - run: BACKEND_URL="${{ inputs.backend_url }}" docker compose up -d --build
+      - run: docker compose up -d --build
+
+  deploy-remote:
+    needs: deploy-local
+    runs-on:
+      - self-hosted
+      - windows
+    env:
+      REMOTE_HOST: ${{ secrets.PEER_HOST }}
+      REMOTE_USER: ${{ secrets.PEER_SSH_USER }}
+      REMOTE_DIR: ${{ secrets.PEER_DEPLOY_DIR }}
+      SSH_KEY: ${{ secrets.PEER_SSH_KEY_PATH }}
+    steps:
+      - uses: actions/checkout@v4
+      - shell: bash
+        run: bash scripts/deploy.sh
