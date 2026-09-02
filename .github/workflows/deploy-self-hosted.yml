@@ -13,7 +13,7 @@ permissions:
 jobs:
   deploy:
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
-    runs-on: [self-hosted, windows, calculadora-ops]
+    runs-on: [self-hosted, Windows, X64]
     env:
       BACKEND_PORT: ${{ vars.LOCAL_BACKEND_PORT || '8082' }}
       FRONTEND_PORT: ${{ vars.LOCAL_FRONTEND_PORT || '8081' }}
