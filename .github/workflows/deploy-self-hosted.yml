@@ -5,6 +5,7 @@ on:
     workflows: ["CI Taller 3"]
     branches: [main]
     types: [completed]
+
   workflow_dispatch:
 
 permissions:
@@ -13,11 +14,14 @@ permissions:
 jobs:
   deploy:
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+
     runs-on: [self-hosted, Windows, X64]
+
     env:
       BACKEND_PORT: ${{ vars.LOCAL_BACKEND_PORT || '8082' }}
       FRONTEND_PORT: ${{ vars.LOCAL_FRONTEND_PORT || '8081' }}
       COMPOSE_PROJECT_NAME: ${{ vars.LOCAL_COMPOSE_PROJECT_NAME || 'calculadora-local' }}
+
       REMOTE_HOST: ${{ secrets.PEER_HOST }}
       REMOTE_USER: ${{ secrets.PEER_SSH_USER }}
       REMOTE_DIR: ${{ secrets.PEER_DEPLOY_DIR }}
@@ -28,16 +32,18 @@ jobs:
       REMOTE_PROJECT_NAME: ${{ secrets.PEER_COMPOSE_PROJECT_NAME }}
 
     steps:
+
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
 
       - name: Desplegar aplicación propia en PC Ops
-        shell: pwsh
-        run: docker compose up -d --build --remove-orphans
+        shell: powershell
+        run: |
+          docker compose up -d --build --remove-orphans
 
       - name: Validar aplicación propia
-        shell: pwsh
+        shell: powershell
         run: |
           $env:BACKEND_URL = "http://localhost:$env:BACKEND_PORT"
           $env:FRONTEND_URL = "http://localhost:$env:FRONTEND_PORT"
