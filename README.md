@@ -1,4 +1,4 @@
-# Calculadora Distribuida Java — Taller 2 y Taller 3
+# Calculadora Distribuida Java — Taller 2 y Taller 3 
 
 ## Integrantes
 
