@@ -1,12 +1,10 @@
 services:
-
   backend:
     build:
       context: .
       dockerfile: Dockerfile.backend
-    container_name: calculadora-backend
     ports:
-      - "8082:8082"
+      - "${BACKEND_PORT:-8082}:8082"
     volumes:
       - history-data:/app/data
     networks:
@@ -16,9 +14,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.frontend
-    container_name: calculadora-frontend
+    environment:
+      PUBLIC_BACKEND_PORT: "${BACKEND_PORT:-8082}"
     ports:
-      - "8081:8081"
+      - "${FRONTEND_PORT:-8081}:8081"
     depends_on:
       - backend
     networks:

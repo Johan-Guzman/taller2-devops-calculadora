@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Pruebas funcionales contra servicios ya levantados (locales o Docker).
 BACKEND_URL="${BACKEND_URL:-http://localhost:8082}"
 FRONTEND_URL="${FRONTEND_URL:-http://localhost:8081}"
 
@@ -28,9 +29,7 @@ post_ok() {
     local endpoint="$1"
     local payload="$2"
     local expected="$3"
-    local response
-    local body
-    local status
+    local response body status
 
     response="$(curl -sS -w $'\n%{http_code}' -H 'Content-Type: application/json' -d "$payload" "$BACKEND_URL$endpoint")"
     body="${response%$'\n'*}"

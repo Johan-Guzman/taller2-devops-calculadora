@@ -1,39 +1,44 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Despliegue remoto por SSH: transfiere docker-compose.yml y el código
-# fuente necesario hacia el equipo destino
-# y levanta allí los contenedores con docker compose.
-#
-# Se ejecuta desde el PC Ops de este equipo (Windows, vía Git Bash) hacia
-# el PC Ops del equipo par (Linux). Usa scp en lugar de rsync porque no
-# se puede asumir que rsync esté disponible en el lado Windows.
-#
-# Variables requeridas:
-#   REMOTE_HOST  IP o hostname del equipo destino
-#   REMOTE_USER  usuario SSH en el equipo destino
-#   REMOTE_DIR   directorio destino donde se copia el proyecto
-# Variables opcionales:
-#   SSH_KEY      ruta a la llave privada SSH a usar
-#   SSH_PORT     puerto SSH (por defecto 22)
+# Despliega el proyecto en el PC Ops del equipo par mediante SSH y Docker Compose.
+# Los puertos remotos son configurables para evitar colisiones entre equipos.
 
 fail() {
     echo "ERROR: $1" >&2
     exit 1
 }
 
-: "${REMOTE_HOST:?debe definirse REMOTE_HOST (IP del equipo destino)}"
-: "${REMOTE_USER:?debe definirse REMOTE_USER (usuario SSH del equipo destino)}"
-: "${REMOTE_DIR:?debe definirse REMOTE_DIR (directorio destino en el equipo remoto)}"
+: "${REMOTE_HOST:?debe definirse REMOTE_HOST}"
+: "${REMOTE_USER:?debe definirse REMOTE_USER}"
+: "${REMOTE_DIR:?debe definirse REMOTE_DIR}"
+
 SSH_PORT="${SSH_PORT:-22}"
+REMOTE_BACKEND_PORT="${REMOTE_BACKEND_PORT:-8084}"
+REMOTE_FRONTEND_PORT="${REMOTE_FRONTEND_PORT:-8083}"
+REMOTE_PROJECT_NAME="${REMOTE_PROJECT_NAME:-calculadora-peer}"
+
+valid_port() {
+    local value="$1"
+    [[ "$value" =~ ^[0-9]+$ ]] && (( value >= 1 && value <= 65535 ))
+}
+
+valid_port "$SSH_PORT" || fail "SSH_PORT debe estar entre 1 y 65535"
+valid_port "$REMOTE_BACKEND_PORT" || fail "REMOTE_BACKEND_PORT debe estar entre 1 y 65535"
+valid_port "$REMOTE_FRONTEND_PORT" || fail "REMOTE_FRONTEND_PORT debe estar entre 1 y 65535"
+[ "$REMOTE_BACKEND_PORT" != "$REMOTE_FRONTEND_PORT" ] || fail "Backend y Frontend no pueden usar el mismo puerto"
+[[ "$REMOTE_PROJECT_NAME" =~ ^[A-Za-z0-9][A-Za-z0-9_.-]*$ ]] || fail "REMOTE_PROJECT_NAME contiene caracteres no válidos"
 
 command -v ssh >/dev/null 2>&1 || fail "ssh no está instalado"
 command -v scp >/dev/null 2>&1 || fail "scp no está instalado"
+command -v curl >/dev/null 2>&1 || fail "curl no está instalado"
 
-# ssh usa -p para el puerto, scp usa -P (mayúscula); por eso van en arrays separados.
 SSH_OPTS=(-p "$SSH_PORT" -o StrictHostKeyChecking=accept-new -o BatchMode=yes)
 SCP_OPTS=(-P "$SSH_PORT" -o StrictHostKeyChecking=accept-new -o BatchMode=yes)
 if [ -n "${SSH_KEY:-}" ]; then
+    if [ ! -f "$SSH_KEY" ] && command -v cygpath >/dev/null 2>&1; then
+        SSH_KEY="$(cygpath -u "$SSH_KEY")"
+    fi
     [ -f "$SSH_KEY" ] || fail "no se encontró la llave SSH en $SSH_KEY"
     SSH_OPTS+=(-i "$SSH_KEY")
     SCP_OPTS+=(-i "$SSH_KEY")
@@ -41,19 +46,30 @@ fi
 
 cd "$(dirname "$0")/.."
 
-echo "Verificando conexión SSH con ${REMOTE_USER}@${REMOTE_HOST}:${SSH_PORT}..."
-ssh "${SSH_OPTS[@]}" "${REMOTE_USER}@${REMOTE_HOST}" "mkdir -p '${REMOTE_DIR}'" \
-    || fail "no se pudo conectar o crear ${REMOTE_DIR} en el equipo remoto"
+echo "Verificando SSH con ${REMOTE_USER}@${REMOTE_HOST}:${SSH_PORT}..."
+ssh "${SSH_OPTS[@]}" "${REMOTE_USER}@${REMOTE_HOST}" \
+    "mkdir -p '${REMOTE_DIR}' && rm -rf '${REMOTE_DIR}/backend' '${REMOTE_DIR}/frontend' '${REMOTE_DIR}/docker-compose.yml' '${REMOTE_DIR}/Dockerfile.backend' '${REMOTE_DIR}/Dockerfile.frontend' '${REMOTE_DIR}/.dockerignore'" \
+    || fail "no se pudo preparar el directorio remoto"
 
-echo "Transfiriendo docker-compose.yml, Dockerfiles y código fuente..."
+echo "Transfiriendo artefactos..."
 scp "${SCP_OPTS[@]}" -r \
-    docker-compose.yml Dockerfile.backend Dockerfile.frontend backend frontend \
+    .dockerignore docker-compose.yml Dockerfile.backend Dockerfile.frontend backend frontend \
     "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/" \
     || fail "falló la transferencia con scp"
 
-echo "Levantando contenedores en el equipo remoto..."
+echo "Levantando contenedores remotos..."
 ssh "${SSH_OPTS[@]}" "${REMOTE_USER}@${REMOTE_HOST}" \
-    "cd '${REMOTE_DIR}' && docker compose up -d --build" \
-    || fail "falló 'docker compose up -d' en el equipo remoto"
+    "cd '${REMOTE_DIR}' && COMPOSE_PROJECT_NAME='${REMOTE_PROJECT_NAME}' BACKEND_PORT='${REMOTE_BACKEND_PORT}' FRONTEND_PORT='${REMOTE_FRONTEND_PORT}' docker compose up -d --build --remove-orphans" \
+    || fail "falló docker compose en el equipo remoto"
 
-echo "OK - Despliegue remoto completado en ${REMOTE_HOST}:${REMOTE_DIR}"
+echo "Validando servicios remotos..."
+for attempt in {1..30}; do
+    if curl -fsS "http://${REMOTE_HOST}:${REMOTE_BACKEND_PORT}/health" >/dev/null 2>&1 \
+        && curl -fsS "http://${REMOTE_HOST}:${REMOTE_FRONTEND_PORT}/status" >/dev/null 2>&1; then
+        echo "OK - Despliegue remoto: http://${REMOTE_HOST}:${REMOTE_FRONTEND_PORT}"
+        exit 0
+    fi
+    sleep 1
+done
+
+fail "los contenedores arrancaron, pero los endpoints remotos no son alcanzables"

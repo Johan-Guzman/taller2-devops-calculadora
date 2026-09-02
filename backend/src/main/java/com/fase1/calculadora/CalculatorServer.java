@@ -1,9 +1,7 @@
 package com.fase1.calculadora;
-
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
-
 import java.io.IOException;
 import java.io.OutputStream;
 import java.math.BigDecimal;
@@ -14,21 +12,17 @@ import java.time.Instant;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 public final class CalculatorServer {
     private static final Pattern NUMBER_A = Pattern.compile("\\\"a\\\"\\s*:\\s*([+-]?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][+-]?\\d+)?)");
     private static final Pattern NUMBER_B = Pattern.compile("\\\"b\\\"\\s*:\\s*([+-]?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][+-]?\\d+)?)");
-
     private final CalculatorService calculatorService;
     private final HistoryRepository historyRepository;
     private final long startedAtNanos;
-
     public CalculatorServer(HistoryRepository historyRepository) {
         this.calculatorService = new CalculatorService();
         this.historyRepository = historyRepository;
         this.startedAtNanos = System.nanoTime();
     }
-
     public static void main(String[] args) throws Exception {
         int port = args.length > 0 ? Integer.parseInt(args[0]) : 8082;
         CalculatorServer application = new CalculatorServer(
@@ -38,7 +32,6 @@ public final class CalculatorServer {
         server.start();
         System.out.println("Backend disponible en http://0.0.0.0:" + port);
     }
-
     public HttpServer createServer(int port) throws IOException {
         HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
         server.createContext("/api/sum", exchange -> handleCalculation(exchange, "sum"));
@@ -49,7 +42,6 @@ public final class CalculatorServer {
         server.createContext("/health", this::handleHealth);
         return server;
     }
-
     private void handleCalculation(HttpExchange exchange, String operation) throws IOException {
         addCors(exchange.getResponseHeaders());
         if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) {
@@ -60,7 +52,6 @@ public final class CalculatorServer {
             sendJson(exchange, 405, "{\"error\":\"Método no permitido\"}");
             return;
         }
-
         try {
             String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
             BigDecimal a = extractNumber(body, NUMBER_A, "a");
@@ -72,7 +63,6 @@ public final class CalculatorServer {
                 case "divide" -> calculatorService.divide(a, b);
                 default -> throw new IllegalStateException("Operación no soportada");
             };
-
             String record = calculationJson(operation, a, b, result, Instant.now().toString());
             historyRepository.append(record);
             sendJson(exchange, 200, record);
@@ -85,7 +75,6 @@ public final class CalculatorServer {
             sendJson(exchange, 500, "{\"error\":\"Error interno del servidor\"}");
         }
     }
-
     private void handleHistory(HttpExchange exchange) throws IOException {
         addCors(exchange.getResponseHeaders());
         if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) {
@@ -96,7 +85,6 @@ public final class CalculatorServer {
             sendJson(exchange, 405, "{\"error\":\"Método no permitido\"}");
             return;
         }
-
         try {
             List<String> history = historyRepository.last(5);
             sendJson(exchange, 200, "[" + String.join(",", history) + "]");
@@ -104,7 +92,6 @@ public final class CalculatorServer {
             sendJson(exchange, 500, "{\"error\":\"No fue posible consultar el historial\"}");
         }
     }
-
     private void handleHealth(HttpExchange exchange) throws IOException {
         addCors(exchange.getResponseHeaders());
         if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) {
@@ -115,7 +102,6 @@ public final class CalculatorServer {
             sendJson(exchange, 405, "{\"error\":\"Método no permitido\"}");
             return;
         }
-
         long uptimeSeconds = (System.nanoTime() - startedAtNanos) / 1_000_000_000L;
         boolean persistenceWritable = historyRepository.isWritable();
         String status = persistenceWritable ? "UP" : "DEGRADED";
@@ -126,7 +112,6 @@ public final class CalculatorServer {
                         + ",\"persistenceWritable\":" + persistenceWritable + "}"
         );
     }
-
     private static BigDecimal extractNumber(String body, Pattern pattern, String field) {
         Matcher matcher = pattern.matcher(body);
         if (!matcher.find()) {
@@ -138,7 +123,6 @@ public final class CalculatorServer {
             throw new IllegalArgumentException("El campo '" + field + "' debe ser numérico");
         }
     }
-
     private static String calculationJson(String operation, BigDecimal a, BigDecimal b, BigDecimal result, String timestamp) {
         return "{"
                 + "\"timestamp\":\"" + escapeJson(timestamp) + "\","
@@ -148,7 +132,6 @@ public final class CalculatorServer {
                 + "\"result\":" + normalized(result)
                 + "}";
     }
-
     private static String normalized(BigDecimal number) {
         BigDecimal normalized = number.stripTrailingZeros();
         if (normalized.scale() < 0) {
@@ -156,21 +139,17 @@ public final class CalculatorServer {
         }
         return normalized.toPlainString();
     }
-
     private static String escapeJson(String value) {
         return value.replace("\\", "\\\\").replace("\"", "\\\"");
     }
-
     private static void addCors(Headers headers) {
         headers.set("Access-Control-Allow-Origin", "*");
         headers.set("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
         headers.set("Access-Control-Allow-Headers", "Content-Type");
     }
-
     private static void sendJson(HttpExchange exchange, int status, String body) throws IOException {
         send(exchange, status, body, "application/json; charset=utf-8");
     }
-
     private static void send(HttpExchange exchange, int status, String body, String contentType) throws IOException {
         exchange.getResponseHeaders().set("Content-Type", contentType);
         if (status == 204) {

@@ -1,27 +1,22 @@
-# Carpetas de compilación del proyecto
+# Salidas de compilación
 out-backend/
 out-frontend/
 out-test/
-
-# Base de datos local (historial)
-data/
-
-# Archivos compilados genéricos de Java
 *.class
 *.jar
 
-# Archivos del sistema operativo (Windows/Mac)
-Thumbs.db
-.DS_Store
+# Persistencia local
+data/history.jsonl
 
-# Configuraciones de editores de código (opcional)
-.vscode/
+# Editores y sistema operativo
 .idea/
+.vscode/
 .metals/
+.DS_Store
+Thumbs.db
 
-# Variables de entorno y llaves locales (despliegue SSH)
+# Configuración y llaves locales
 .env
 *.pem
 id_rsa*
 id_ed25519*
-

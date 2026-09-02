@@ -1,49 +1,41 @@
 * {
     box-sizing: border-box;
 }
-
 body {
     margin: 0;
     font-family: Arial, sans-serif;
     background: #f4f4f4;
     color: #222;
 }
-
 .container {
     width: min(900px, calc(100% - 32px));
     margin: 40px auto;
     display: grid;
     gap: 20px;
 }
-
 .card {
     background: #fff;
     border: 1px solid #ddd;
     border-radius: 10px;
     padding: 24px;
 }
-
 h1,
 h2 {
     margin-top: 0;
 }
-
 form {
     display: grid;
     gap: 10px;
 }
-
 input,
 select,
 button {
     font: inherit;
     padding: 10px 12px;
 }
-
 button {
     cursor: pointer;
 }
-
 .result {
     margin-top: 18px;
     padding: 14px;
@@ -52,23 +44,19 @@ button {
     border-radius: 6px;
     font-weight: 700;
 }
-
 .history-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 16px;
 }
-
 .history-header h2 {
     margin-bottom: 0;
 }
-
 #history {
     margin-bottom: 0;
     padding-left: 24px;
 }
-
 #history li {
     margin: 8px 0;
 }

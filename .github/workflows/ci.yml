@@ -13,7 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: docker compose build
+      - name: Construir imágenes
+        run: docker compose build
 
   test:
     needs: build
@@ -23,10 +24,18 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "21"
-      - run: chmod +x scripts/test.sh scripts/test_endpoints.sh
-      - run: ./scripts/test.sh
-      - run: docker compose up -d --build
-      - run: ./scripts/test_endpoints.sh
-      - if: always()
-        run: docker compose down -v
+          java-version: "17"
+      - name: Preparar scripts
+        run: chmod +x scripts/test.sh scripts/test_endpoints.sh
+      - name: Probar HU1-HU5
+        run: ./scripts/test.sh
+      - name: Levantar contenedores
+        run: docker compose up -d --build
+      - name: Probar endpoints
+        run: ./scripts/test_endpoints.sh
+      - name: Mostrar logs si falla
+        if: failure()
+        run: docker compose logs --no-color
+      - name: Limpiar contenedores
+        if: always()
+        run: docker compose down -v --remove-orphans

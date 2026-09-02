@@ -1,24 +1,22 @@
-REQUISITOS DE EJECUCION
-VERSION DE ENTREGA: 1.0.2
+REQUISITOS - TALLER 2 Y TALLER 3
 
-EQUIPO BACKEND
-1. JDK 17 o superior instalado.
-2. Los comandos java y javac disponibles en PATH.
-3. Un puerto TCP disponible para el Backend. Por defecto se usa 8080.
-4. Permisos de escritura en la carpeta de la aplicacion para crear data/history.jsonl.
-5. Conectividad de red desde el equipo Frontend hacia la IP y el puerto del Backend.
-6. Mantener el firewall activo y autorizar entrada unicamente al puerto TCP concreto usado por el Backend cuando el entorno lo requiera.
+DESARROLLO / PRUEBAS LOCALES
+- JDK 17 o superior con java y javac en PATH.
+- Navegador web moderno.
+- Bash para scripts .sh (Linux/macOS o Git Bash en Windows).
+- curl para las pruebas de endpoints.
 
-EQUIPO FRONTEND
-1. JDK 17 o superior instalado.
-2. Los comandos java y javac disponibles en PATH.
-3. Un navegador web moderno.
-4. Un puerto TCP local disponible para servir el Frontend. Por defecto se usa 8081.
-5. Conectividad de red hacia la IP y el puerto del Backend.
+PC OPS - TALLER 3
+- Windows con Docker Desktop y Docker Compose operativos.
+- Git for Windows / Git Bash.
+- Runner self-hosted de GitHub Actions registrado y encendido.
+- Cliente OpenSSH (ssh y scp).
+- Servidor OpenSSH habilitado si este PC recibirá el despliegue del equipo par.
+- Firewall activo con los puertos explícitamente autorizados.
 
-NO SE REQUIERE
-- Maven.
-- Gradle.
-- Node.js.
-- Base de datos externa.
-- Librerias adicionales.
+PUERTOS PROPUESTOS
+- Aplicación propia: Frontend 8081, Backend 8082.
+- Aplicación recibida del equipo par: Frontend 8083, Backend 8084.
+- SSH: 22.
+
+Los puertos son configurables. No se requiere Maven, Gradle, Node.js ni una base de datos externa.

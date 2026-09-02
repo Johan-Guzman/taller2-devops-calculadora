@@ -1,5 +1,4 @@
 package com.fase1.calculadora;
-
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -8,14 +7,11 @@ import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
 public final class HistoryRepository {
     private final Path file;
-
     public HistoryRepository(Path file) {
         this.file = file;
     }
-
     public synchronized void append(String jsonRecord) throws IOException {
         Path parent = file.getParent();
         if (parent != null) {
@@ -29,7 +25,6 @@ public final class HistoryRepository {
                 StandardOpenOption.APPEND
         );
     }
-
     public synchronized List<String> last(int limit) throws IOException {
         if (limit <= 0 || !Files.exists(file)) {
             return Collections.emptyList();
@@ -44,7 +39,6 @@ public final class HistoryRepository {
         }
         return result;
     }
-
     public synchronized boolean isWritable() {
         try {
             Path parent = file.getParent();

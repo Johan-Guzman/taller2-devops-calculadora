@@ -11,28 +11,38 @@ permissions:
   contents: read
 
 jobs:
-  deploy-local:
+  deploy:
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
-    # El PC Ops de este equipo corre Windows; ajustar la etiqueta de equipo
-    # (p. ej. "equipo-B") una vez asignada en el salón.
-    runs-on:
-      - self-hosted
-      - windows
-    steps:
-      - uses: actions/checkout@v4
-      - run: docker compose up -d --build
-
-  deploy-remote:
-    needs: deploy-local
-    runs-on:
-      - self-hosted
-      - windows
+    runs-on: [self-hosted, windows, calculadora-ops]
     env:
+      BACKEND_PORT: ${{ vars.LOCAL_BACKEND_PORT || '8082' }}
+      FRONTEND_PORT: ${{ vars.LOCAL_FRONTEND_PORT || '8081' }}
+      COMPOSE_PROJECT_NAME: ${{ vars.LOCAL_COMPOSE_PROJECT_NAME || 'calculadora-local' }}
       REMOTE_HOST: ${{ secrets.PEER_HOST }}
       REMOTE_USER: ${{ secrets.PEER_SSH_USER }}
       REMOTE_DIR: ${{ secrets.PEER_DEPLOY_DIR }}
       SSH_KEY: ${{ secrets.PEER_SSH_KEY_PATH }}
+      SSH_PORT: ${{ secrets.PEER_SSH_PORT }}
+      REMOTE_BACKEND_PORT: ${{ secrets.PEER_BACKEND_PORT }}
+      REMOTE_FRONTEND_PORT: ${{ secrets.PEER_FRONTEND_PORT }}
+      REMOTE_PROJECT_NAME: ${{ secrets.PEER_COMPOSE_PROJECT_NAME }}
+
     steps:
       - uses: actions/checkout@v4
-      - shell: bash
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Desplegar aplicación propia en PC Ops
+        shell: pwsh
+        run: docker compose up -d --build --remove-orphans
+
+      - name: Validar aplicación propia
+        shell: pwsh
+        run: |
+          $env:BACKEND_URL = "http://localhost:$env:BACKEND_PORT"
+          $env:FRONTEND_URL = "http://localhost:$env:FRONTEND_PORT"
+          bash scripts/test_endpoints.sh
+
+      - name: Desplegar en equipo par por SSH
+        shell: bash
         run: bash scripts/deploy.sh
