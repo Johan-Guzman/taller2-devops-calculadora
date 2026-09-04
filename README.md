@@ -1,6 +1,6 @@
 # Calculadora Distribuida Java — Taller 2 y Taller 3 
 # Ingesoft 5
-## Integrantes n  
+## Integrantes n  ssssss
 
 1. Johan-Guzman
 2. RenzoFernando
